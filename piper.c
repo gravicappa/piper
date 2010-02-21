@@ -138,7 +138,7 @@ main(int argc, char **argv)
         }
     }
   } else {
-    fprintf(stderr, "Usage: %s [-f fifo_name] cmd ...\n", argv[0]);
+    fprintf(stderr, "Usage: %s [-f fifo_name] cmd [arg1] ...\n", argv[0]);
   }
   return ret;
 }
