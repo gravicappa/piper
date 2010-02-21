@@ -1,11 +1,14 @@
-exe = piper
+dst = piper
 LDFLAGS += -lutil
 destdir=/usr/local
 
-all: ${exe}
+all: ${dst}
 
 install:
-	install -m 755 ${exe} ${destdir}/bin
+	install -m 755 ${dst} ${destdir}/bin
 
-${exe} : piper.c
+clean:
+	-rm ${dst} 2>/dev/null
+
+${dst} : piper.c
 	${CC} ${CFLAGS} $< ${LDFLAGS} -o $@ 
