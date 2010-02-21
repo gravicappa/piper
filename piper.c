@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <errno.h>
 
+#define FIFO_NAME ":in"
+
 void
 log_printf(const char *fmt, ...)
 {
@@ -25,8 +27,10 @@ pump_data(int from, int to)
   size_t read_bytes, written_bytes = 0;
 
   read_bytes = read(from, buf, sizeof(buf));
+#if 0
   if (read_bytes == -1)
     perror("pump_data");
+#endif
   if (read_bytes > 0) {
     written_bytes = write(to, buf, read_bytes);
     fsync(to);
@@ -96,19 +100,29 @@ error:
 int
 main(int argc, char **argv)
 {
-  char *fifo_name = "in";
-  char **args;
-  int fd, wfifo, fifo, ret = 1;
+  char *fifo_name = FIFO_NAME;
+  int i, fd, wfifo, fifo, ret = 0;
   pid_t pid;
 
-  if (argc > 1) {
+  for (i = 1; i < argc; ++i) {
+    if (strcmp(argv[i], "-f") == 0) {
+      if (i + 1 < argc) {
+        fifo_name = argv[++i];
+      } else {
+        ret = 1;
+      }
+    } else
+      break;
+  }
+  if (i < argc && ret == 0) {
+    ret = 0;
     switch (forkpty(&fd, 0, 0, 0)) {
       case -1:
         perror("forkpty");
         return -1;
 
       case 0:
-        execvp(argv[1], argv + 1);
+        execvp(argv[i], argv + i);
         perror("Running process error");
         return -1;
 
@@ -124,7 +138,7 @@ main(int argc, char **argv)
         }
     }
   } else {
-    fprintf(stderr, "Usage: %s cmd ...\n", argv[0]);
+    fprintf(stderr, "Usage: %s [-f fifo_name] cmd ...\n", argv[0]);
   }
   return ret;
 }
