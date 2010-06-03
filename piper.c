@@ -7,8 +7,11 @@
 #include <pty.h>
 #include <unistd.h>
 #include <errno.h>
+#include <signal.h>
 
 #define FIFO_NAME ":in"
+
+pid_t pid;
 
 void
 log_printf(const char *fmt, ...)
@@ -65,7 +68,8 @@ serve_process(int fd, int fifo)
         pump_data(fifo, fd);
       }
     } else {
-      break;
+      if (errno != EINTR)
+        break;
     }
   }
   return 0;
@@ -97,12 +101,39 @@ error:
   return 1;
 }
 
+static int
+set_noecho(int fd)
+{
+  struct termios stermios;
+
+  if (tcgetattr(fd, &stermios) < 0)
+    return 1;
+
+  stermios.c_lflag &= ~(ECHO | ECHOE | ECHOK | ECHONL);
+  stermios.c_lflag |= ICANON;
+  /* stermios.c_oflag &= ~(ONLCR); */
+  /* would also turn off NL to CR/NL mapping on output */
+  stermios.c_cc[VERASE] = 0177;
+#ifdef VERASE2
+  stermios.c_cc[VERASE2] = 0177;
+#endif
+  if (tcsetattr(fd, TCSANOW, &stermios) < 0)
+    return 1;
+  return 0;
+}
+
+void
+handle_sigint(int sig)
+{
+  signal(SIGINT, handle_sigint);
+  kill(pid, SIGINT);
+}
+
 int
 main(int argc, char **argv)
 {
-  char *fifo_name = FIFO_NAME;
+  const char *fifo_name = FIFO_NAME;
   int i, fd, wfifo, fifo, ret = 0;
-  pid_t pid;
 
   for (i = 1; i < argc; ++i) {
     if (strcmp(argv[i], "-f") == 0) {
@@ -114,16 +145,19 @@ main(int argc, char **argv)
     } else
       break;
   }
+  signal(SIGINT, handle_sigint);
+
   if (i < argc && ret == 0) {
     ret = 0;
-    switch (forkpty(&fd, 0, 0, 0)) {
+    switch ((pid = forkpty(&fd, 0, 0, 0))) {
       case -1:
         perror("forkpty");
         return -1;
 
       case 0:
+        set_noecho(0);
         execvp(argv[i], argv + i);
-        perror("Running process error");
+        perror("exec");
         return -1;
 
       default:
