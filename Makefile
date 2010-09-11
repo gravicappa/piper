@@ -1,14 +1,14 @@
-dst = piper
+dst = piper editwrap
 LDFLAGS += -lutil
 destdir=/usr/local
 
-all: ${dst}
+all: $(dst)
 
 install:
-	install -m 755 ${dst} ${destdir}/bin
+	install -m 755 $(dst) $(destdir)/bin
 
 clean:
-	-rm ${dst} 2>/dev/null
+	-rm $(dst) 2>/dev/null
 
-${dst} : piper.c
-	${CC} ${CFLAGS} $< ${LDFLAGS} -o $@ 
+%: %.c
+	$(CC) $(CFLAGS) $< $(LDFLAGS) -o $@
