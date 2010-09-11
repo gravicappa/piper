@@ -4,7 +4,7 @@
 #include <string.h>
 #include <sys/select.h>
 #include <fcntl.h>
-#include <pty.h>
+#include <termios.h>
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
@@ -135,41 +135,39 @@ main(int argc, char **argv)
   const char *fifo_name = FIFO_NAME;
   int i, fd, wfifo, fifo, ret = 0;
 
-  for (i = 1; i < argc; ++i) {
-    if (strcmp(argv[i], "-f") == 0) {
-      if (i + 1 < argc) {
-        fifo_name = argv[++i];
-      } else {
-        ret = 1;
-      }
-    } else
+  for (i = 1; i < argc && argv[i][0] == '-'; ++i)
+    switch (argv[i][1]) {
+      case 'f':
+        if (++i < argc)
+          fifo_name = argv[i];
       break;
-  }
+      default: ret = 1;
+    }
   signal(SIGINT, handle_sigint);
 
   if (i < argc && ret == 0) {
     ret = 0;
     switch ((pid = forkpty(&fd, 0, 0, 0))) {
-      case -1:
-        perror("forkpty");
-        return -1;
+    case -1:
+      perror("forkpty");
+      return -1;
 
-      case 0:
-        set_noecho(0);
-        execvp(argv[i], argv + i);
-        perror("exec");
-        return -1;
+    case 0:
+      set_noecho(0);
+      execvp(argv[i], argv + i);
+      perror("exec");
+      return -1;
 
-      default:
-        if (start_fifo(fifo_name, &fifo, &wfifo) == 0) {
-          serve_process(fd, fifo);
-          ret = 0;
-          close(fd);
-          close(fifo);
-          close(wfifo);
-          remove(fifo_name);
-          wait(0);
-        }
+    default:
+      if (start_fifo(fifo_name, &fifo, &wfifo) == 0) {
+        serve_process(fd, fifo);
+        ret = 0;
+        close(fd);
+        close(fifo);
+        close(wfifo);
+        remove(fifo_name);
+        wait(0);
+      }
     }
   } else {
     fprintf(stderr, "Usage: %s [-f fifo_name] cmd [arg1] ...\n", argv[0]);
