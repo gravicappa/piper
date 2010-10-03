@@ -1,4 +1,4 @@
-dst = piper editwrap
+dst = piper editwrap stdio
 LDFLAGS += -lutil
 destdir=/usr/local
 
