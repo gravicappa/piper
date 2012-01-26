@@ -1,0 +1,6 @@
+# Description
+
+Tool to effectively work in REPL-based development environments (CL, Scheme,
+TCL, ...). Creates fifo `:in` in current directory. Any input to `:in` is sent
+to stdin of running by piper process. It is convenient to set up a macro/
+command in your text editor such as 'send selection/s-expr to :in'.
