@@ -56,49 +56,40 @@ serve_process(int fd, int fifo)
 
     res = select(m + 1, &fds, 0, 0, 0);
     if (res > 0) {
-      if (FD_ISSET(0, &fds)) {
+      if (FD_ISSET(0, &fds))
         if (pump_data(0, fd) <= 0)
           break;
-      }
-      if (FD_ISSET(fd, &fds)) {
+      if (FD_ISSET(fd, &fds))
         if (pump_data(fd, 1) < 0)
           break;
-      }
-      if (FD_ISSET(fifo, &fds)) {
+      if (FD_ISSET(fifo, &fds))
         pump_data(fifo, fd);
-      }
-    } else {
+    } else
       if (errno != EINTR)
         break;
-    }
   }
   return 0;
 }
 
 int
-start_fifo(const char *name, int *rfifo, int *wfifo)
+start_fifo(const char *name, int *readfifo, int *writefifo)
 {
   remove(name);
   if (mkfifo(name, 0600))
     return 1;
 
-  *rfifo = open(name, O_RDONLY | O_NONBLOCK);
-  if (*rfifo < 0)
-    goto error;
-
-  *wfifo = open(name, O_WRONLY);
-  if (*wfifo < 0)
-    goto error;
-
+  *readfifo = open(name, O_RDONLY | O_NONBLOCK);
+  if (*readfifo < 0) {
+    remove(name);
+    return 1;
+  }
+  *writefifo = open(name, O_WRONLY);
+  if (*writefifo < 0) {
+    close(*readfifo);
+    remove(name);
+    return 1;
+  }
   return 0;
-
-error:
-  if (*rfifo)
-    close(*rfifo);
-  if (*wfifo)
-    close(*wfifo);
-  remove(name);
-  return 1;
 }
 
 static int
@@ -133,14 +124,14 @@ int
 main(int argc, char **argv)
 {
   const char *fifo_name = FIFO_NAME;
-  int i, fd, wfifo, fifo, ret = 0;
+  int i, fd, writefifo, fifo, ret = 0;
 
   for (i = 1; i < argc && argv[i][0] == '-'; ++i)
     switch (argv[i][1]) {
       case 'f':
         if (++i < argc)
           fifo_name = argv[i];
-      break;
+        break;
       default: ret = 1;
     }
   signal(SIGINT, handle_sigint);
@@ -159,18 +150,17 @@ main(int argc, char **argv)
       return -1;
 
     default:
-      if (start_fifo(fifo_name, &fifo, &wfifo) == 0) {
+      if (start_fifo(fifo_name, &fifo, &writefifo) == 0) {
         serve_process(fd, fifo);
         ret = 0;
         close(fd);
         close(fifo);
-        close(wfifo);
+        close(writefifo);
         remove(fifo_name);
         wait(0);
       }
     }
-  } else {
+  } else
     fprintf(stderr, "Usage: %s [-f fifo_name] cmd [arg1] ...\n", argv[0]);
-  }
   return ret;
 }
