@@ -12,6 +12,7 @@
 #define FIFO_NAME ":in"
 
 pid_t pid;
+char *fifo_name = FIFO_NAME;
 
 void
 log_printf(const char *fmt, ...)
@@ -30,10 +31,6 @@ pump_data(int from, int to)
   size_t read_bytes, written_bytes = 0;
 
   read_bytes = read(from, buf, sizeof(buf));
-#if 0
-  if (read_bytes == -1)
-    perror("pump_data");
-#endif
   if (read_bytes > 0) {
     written_bytes = write(to, buf, read_bytes);
     fsync(to);
@@ -120,10 +117,15 @@ handle_sigint(int sig)
   kill(pid, SIGINT);
 }
 
+void
+handle_sighup(int sig)
+{
+  remove(fifo_name);
+}
+
 int
 main(int argc, char **argv)
 {
-  const char *fifo_name = FIFO_NAME;
   int i, fd, writefifo, fifo, ret = 0;
 
   for (i = 1; i < argc && argv[i][0] == '-'; ++i)
@@ -135,6 +137,7 @@ main(int argc, char **argv)
       default: ret = 1;
     }
   signal(SIGINT, handle_sigint);
+  signal(SIGHUP, handle_sighup);
 
   if (i < argc && ret == 0) {
     ret = 0;
