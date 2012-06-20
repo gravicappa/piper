@@ -1,6 +1,10 @@
 # Description
 
-Tool to effectively work in REPL-based development environments (CL, Scheme,
-TCL, ...). Creates fifo `:in` in current directory. Any input to `:in` is sent
-to stdin of running by piper process. It is convenient to set up a macro/
-command in your text editor such as 'send selection/s-expr to :in'.
+`piper` is a tool to effectively work in REPL-based development environments
+(CL, Scheme, TCL, ...). It creates fifo `:in` in current directory and runs
+program in pty. Any input to `:in` is sent to stdin of running by piper
+process. It is convenient to set up a macro/ command in your text editor such
+as 'send selection/s-expr to :in'.
+
+`stdio` is a `piper` without fifo. So it just runs program in pty and sends
+input from stdin there and pty's output to stdout.

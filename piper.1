@@ -1,0 +1,25 @@
+.Dd June 20, 2012
+.Dt PIPER 1 1
+.Os
+.Sh NAME
+
+.Nm piper
+.Nd fifo-based repl tool
+
+.Sh SYNOPSIS
+.Nm
+.Op Fl f Ar fifo-name
+.Bk -words
+.Op Ar command ...
+.Ek
+
+.Sh DESCRIPTION
+Creates fifo
+.Ar fifo-name
+(default is 
+.Pa :in )
+and
+starts 
+.Ar command
+with arguments in a pty. Any input to stdin and fifo is passed to stdin of
+pty. Output of pty is redirected to stdout.

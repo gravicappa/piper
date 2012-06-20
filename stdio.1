@@ -1,0 +1,19 @@
+.Dd June 20, 2012
+.Dt STDIO 1 1
+.Os
+.Sh NAME
+
+.Nm stdio
+.Nd fifo-based repl tool
+
+.Sh SYNOPSIS
+.Nm
+.Bk -words
+.Op Ar command ...
+.Ek
+
+.Sh DESCRIPTION
+Starts 
+.Ar command
+with arguments in a pty. Any input to stdin is passed to stdin of pty. Output
+of pty is redirected to stdout.
