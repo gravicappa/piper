@@ -3,11 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/select.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <pty.h>
 
 #define FIFO_NAME ":in"
 

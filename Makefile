@@ -1,8 +1,11 @@
 dst = piper stdio
+
 LDFLAGS += -lutil
 destdir=/usr/local
 bindir=$(destdir)/bin
 mandir=$(destdir)/share/man
+
+-include config.mk
 
 all: $(dst)
 

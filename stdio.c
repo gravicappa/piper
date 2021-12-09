@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/select.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <pty.h>
 #include <unistd.h>
@@ -26,21 +27,25 @@ pump_data(int from, int to)
 }
 
 int
-serve_process(int fd)
+serve_process(int fd, int exit_after_stdin_closed)
 {
   fd_set fds;
-  int res, m;
+  int res, m, stdin_closed = 0;
 
   for (;;) {
     FD_ZERO(&fds);
-    FD_SET(0, &fds);
+    if (!stdin_closed)
+      FD_SET(0, &fds);
     FD_SET(fd, &fds);
 
     res = select(fd + 1, &fds, 0, 0, 0);
     if (res > 0) {
       if (FD_ISSET(0, &fds)) {
-        if (pump_data(0, fd) <= 0)
-          break;
+        if (pump_data(0, fd) <= 0) {
+          stdin_closed = 1;
+          if (exit_after_stdin_closed)
+            break;
+        }
       }
       if (FD_ISSET(fd, &fds)) {
         if (pump_data(fd, 1) < 0)
@@ -84,19 +89,21 @@ handle_sigint(int sig)
 void
 usage(const char *argv0) 
 {
-  fprintf(stderr, "Usage: %s cmd [arg1] ...\n", argv0);
+  fprintf(stderr, "Usage: %s [-close-after] cmd [arg1] ...\n", argv0);
 }
 
 int
 main(int argc, char **argv)
 {
-  int i, fd, ret = 0;
+  int i, fd, ret = 0, status = 0, close_after = 0;
 
   for (i = 1; i < argc; ++i)
     if (strcmp(argv[i], "--") == 0)
       break;
     else if (strcmp(argv[i], "-h") == 0)
       usage(argv[0]);
+    else if (strcmp(argv[i], "-close-after") == 0)
+      close_after = 1;
     else
       break;
   signal(SIGINT, handle_sigint);
@@ -115,10 +122,15 @@ main(int argc, char **argv)
         return -1;
 
       default:
-        serve_process(fd);
-        ret = 0;
+        serve_process(fd, !close_after);
+        if (!close_after)
+          close(fd);
+        waitpid(pid, &status, 0);
         close(fd);
-        wait(0);
+        if (WIFEXITED(status))
+          ret = WEXITSTATUS(status);
+        else
+          ret = 1;
     }
   } else
     usage(argv[0]);
